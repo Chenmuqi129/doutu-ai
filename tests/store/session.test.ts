@@ -28,8 +28,8 @@ function makeImage(id: string): SessionImage {
     fileName: `${id}.jpg`,
     mimeType: "image/jpeg",
     sizeBytes: 1024,
-    width: 1568,
-    height: 1176,
+    width: 1280,
+    height: 960,
   };
 }
 
@@ -71,7 +71,7 @@ describe("useSession —— 基础状态", () => {
     const state = useSession.getState();
     expect(state.images).toHaveLength(2);
     expect(state.images[0].fileName).toBe("a.jpg");
-    expect(state.images[0].width).toBe(1568);
+    expect(state.images[0].width).toBe(1280);
   });
 
   it("removeImage 删除指定图片并释放登记表与 ObjectURL", () => {

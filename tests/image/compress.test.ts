@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ERROR_CODES, isAppError } from "@/lib/errors";
 import { compressImage, computeTargetSize } from "@/lib/image/compress";
 import {
-  IMAGE_JPEG_QUALITY,
+  IMAGE_MAX,
   IMAGE_MAX_BYTES,
+  IMAGE_JPEG_QUALITY,
   IMAGE_MAX_EDGE,
+  UPLOAD_MAX_BYTES,
 } from "@/lib/rules/constants";
 
 /* ---------------- canvas / bitmap 桩 ---------------- */
@@ -86,7 +88,7 @@ describe("computeTargetSize —— 尺寸缩放", () => {
     const target = computeTargetSize(4000, 3000);
 
     expect(target.width).toBe(IMAGE_MAX_EDGE);
-    expect(target.height).toBe(1176);
+    expect(target.height).toBe(960);
     expect(target.scale).toBeLessThan(1);
   });
 
@@ -94,7 +96,7 @@ describe("computeTargetSize —— 尺寸缩放", () => {
     const target = computeTargetSize(3000, 4000);
 
     expect(target.height).toBe(IMAGE_MAX_EDGE);
-    expect(target.width).toBe(1176);
+    expect(target.width).toBe(960);
   });
 
   it("正方形超大图缩放后仍是正方形", () => {
@@ -165,8 +167,8 @@ describe("compressImage —— 客户端压缩", () => {
     const result = await compressImage(jpegFile());
 
     expect(result.width).toBe(IMAGE_MAX_EDGE);
-    expect(result.height).toBe(1176);
-    expect(paintCalls.drawImage).toEqual([[0, 0, IMAGE_MAX_EDGE, 1176]]);
+    expect(result.height).toBe(960);
+    expect(paintCalls.drawImage).toEqual([[0, 0, IMAGE_MAX_EDGE, 960]]);
   });
 
   it("绘制前先铺白底，避免 PNG 透明区域变黑", async () => {
@@ -231,5 +233,36 @@ describe("compressImage —— 客户端压缩", () => {
       code: ERROR_CODES.IMAGE_TOO_LARGE,
     });
     expect(bitmapCloseCount).toBe(1);
+  });
+});
+
+/* ---------------- 压缩参数与 4MB 请求上限 ---------------- */
+
+describe("压缩参数与请求体积预算", () => {
+  it("参数锁定：长边 1280px、JPEG 质量 0.75", () => {
+    expect(IMAGE_MAX_EDGE).toBe(1280);
+    expect(IMAGE_JPEG_QUALITY).toBe(0.75);
+  });
+
+  it("单张上限、请求体上限与图片数量上限保持不变", () => {
+    expect(IMAGE_MAX_BYTES).toBe(2 * 1024 * 1024);
+    expect(UPLOAD_MAX_BYTES).toBe(4 * 1024 * 1024);
+    expect(IMAGE_MAX).toBe(9);
+  });
+
+  it("4MB 请求体摊到 9 张图，平均单张预算约 455KB", () => {
+    const budgetPerImage = UPLOAD_MAX_BYTES / IMAGE_MAX;
+    expect(Math.round(budgetPerImage / 1024)).toBe(455);
+    expect(budgetPerImage).toBeGreaterThan(400 * 1024);
+  });
+
+  it("已知边界：单张上限 × 9 张大于请求体上限，总体积仍必须由服务端拦截", () => {
+    // 这条断言刻意把已知边界固定下来，而不是假装 9 张图一定安全：
+    //   - IMAGE_MAX_BYTES 是单张兜底（压缩后超过就拒绝）；
+    //   - UPLOAD_MAX_BYTES 是总量兜底（服务端解析 multipart 时累计校验）。
+    // 真实 JPEG 的压缩后体积取决于画面复杂度，单元测试无法证明
+    // 「任意 9 张真实图片一定 ≤ 4MB」，因此不使用桩数据伪造该结论。
+    // 实际体积由 E2E 用真实浏览器 + 真实图片实测（见 P2 汇报）。
+    expect(IMAGE_MAX_BYTES * IMAGE_MAX).toBeGreaterThan(UPLOAD_MAX_BYTES);
   });
 });

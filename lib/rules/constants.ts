@@ -78,11 +78,17 @@ export const IMAGE_ACCEPTED_MIME_TYPES = [
 /** 允许上传的图片扩展名，用于兜底校验 MIME 缺失的情况。 */
 export const IMAGE_ACCEPTED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"] as const;
 
-/** 客户端压缩时长边上限（像素）。压缩既降低视觉 Token 成本，也规避请求体上限。 */
-export const IMAGE_MAX_EDGE = 1568;
+/**
+ * 客户端压缩时长边上限（像素）。
+ *
+ * 1280 是 9 图场景下的折中：在保证视觉模型仍能看清画面内容的前提下，
+ * 让 9 张压缩图的总请求体积稳定落在 UPLOAD_MAX_BYTES（4MB）以内，
+ * 同时明显降低视觉 Token 成本。
+ */
+export const IMAGE_MAX_EDGE = 1280;
 
-/** 客户端压缩后的 JPEG 质量。 */
-export const IMAGE_JPEG_QUALITY = 0.8;
+/** 客户端压缩后的 JPEG 质量。与 1280px 配合进一步压缩单张体积。 */
+export const IMAGE_JPEG_QUALITY = 0.75;
 
 /** 单张图片压缩后的字节上限（2MB），超出则拒绝并提示。 */
 export const IMAGE_MAX_BYTES = 2 * 1024 * 1024;
