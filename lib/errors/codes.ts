@@ -17,6 +17,10 @@ export const ERROR_CODES = {
   UNSUPPORTED_IMAGE_TYPE: "UNSUPPORTED_IMAGE_TYPE",
   /** 单张图片压缩后仍超过 IMAGE_MAX_BYTES */
   IMAGE_TOO_LARGE: "IMAGE_TOO_LARGE",
+  /** 本次上传的图片总体积超过 UPLOAD_MAX_BYTES */
+  UPLOAD_TOO_LARGE: "UPLOAD_TOO_LARGE",
+  /** 服务端没有配置模型 API Key（P2 新增） */
+  AI_NOT_CONFIGURED: "AI_NOT_CONFIGURED",
   /** 模型服务返回错误或限流（规格书 §23「图片分析失败」） */
   AI_UPSTREAM_ERROR: "AI_UPSTREAM_ERROR",
   /** 模型调用超时 */

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getAIProviderStatus } from "@/lib/ai/providers";
 import type { ApiResponse, HealthData } from "@/lib/types";
 
 /**
@@ -22,24 +23,9 @@ const SERVICE_NAME = "douyin-ai-content-assistant";
 const APP_VERSION = "0.1.0";
 const STAGE = "P0";
 
-/**
- * AI 配置的默认值。
- * P1 会把这部分读取逻辑收敛到 lib/ai/providers.ts，本文件届时改为调用该模块，
- * 以保证「模型配置只有一个来源」。
- */
-const AI_DEFAULTS = {
-  provider: "dashscope",
-  baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  visionModel: "qwen-vl-max",
-  textModel: "qwen-plus",
-} as const;
-
 export async function GET() {
-  const provider = process.env.AI_PROVIDER ?? AI_DEFAULTS.provider;
-  const visionModel = process.env.AI_VISION_MODEL ?? AI_DEFAULTS.visionModel;
-  const textModel = process.env.AI_TEXT_MODEL ?? AI_DEFAULTS.textModel;
-  const apiKeyConfigured = Boolean(process.env.AI_API_KEY);
-  const baseUrlConfigured = Boolean(process.env.AI_BASE_URL ?? AI_DEFAULTS.baseUrl);
+  // 模型配置只有一个来源：lib/ai/providers.ts
+  const ai = getAIProviderStatus();
 
   const data: HealthData = {
     service: SERVICE_NAME,
@@ -47,14 +33,7 @@ export async function GET() {
     version: APP_VERSION,
     stage: STAGE,
     node: process.version,
-    ai: {
-      provider,
-      baseUrlConfigured,
-      apiKeyConfigured,
-      visionModel,
-      textModel,
-      configured: apiKeyConfigured && baseUrlConfigured,
-    },
+    ai: { ...ai, configured: ai.apiKeyConfigured && ai.baseUrlConfigured },
     timestamp: new Date().toISOString(),
   };
 

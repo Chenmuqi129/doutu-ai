@@ -1,4 +1,4 @@
-import { IMAGE_MAX, TAG_MAX, TITLE_MAX } from "@/lib/rules/constants";
+import { IMAGE_MAX, IMAGE_MAX_BYTES, TAG_MAX, TITLE_MAX } from "@/lib/rules/constants";
 
 import { ERROR_CODES, type AppErrorCode } from "./codes";
 import type { ErrorDescriptor } from "./types";
@@ -33,7 +33,19 @@ export const ERROR_DESCRIPTORS: Record<AppErrorCode, ErrorDescriptor> = {
   [ERROR_CODES.IMAGE_TOO_LARGE]: {
     httpStatus: 400,
     retryable: false,
-    userMessage: "有图片体积过大，请压缩后重新上传。",
+    userMessage: `有图片体积过大（单张上限 ${Math.round(
+      IMAGE_MAX_BYTES / (1024 * 1024),
+    )}MB），请压缩后重新上传。`,
+  },
+  [ERROR_CODES.UPLOAD_TOO_LARGE]: {
+    httpStatus: 413,
+    retryable: false,
+    userMessage: "本次上传的图片总体积过大，请减少图片数量后重试。",
+  },
+  [ERROR_CODES.AI_NOT_CONFIGURED]: {
+    httpStatus: 503,
+    retryable: false,
+    userMessage: "AI 服务尚未配置：服务端缺少模型 API Key，请联系管理员完成配置。",
   },
   [ERROR_CODES.AI_UPSTREAM_ERROR]: {
     httpStatus: 502,
