@@ -6,6 +6,7 @@ import { ErrorBanner } from "@/components/shared/ErrorBanner";
 import { Button } from "@/components/ui/button";
 import { isAppError } from "@/lib/errors";
 import { compressImage, isAcceptedImageType } from "@/lib/image/compress";
+import { formatSelectedCount } from "@/lib/image/selection";
 import { registerUploadBlob } from "@/lib/image/uploadRegistry";
 import { IMAGE_ACCEPTED_EXTENSIONS, IMAGE_MAX, IMAGE_MIN } from "@/lib/rules/constants";
 import { useSession } from "@/lib/store/useSession";
@@ -30,6 +31,7 @@ export function UploadStep() {
   const remainingSlots = IMAGE_MAX - images.length;
   const isAnalyzing = analyzeStatus === "loading";
   const canAnalyze = images.length >= IMAGE_MIN && !isAnalyzing && !processing;
+  const selectedCountLabel = formatSelectedCount(images.length, IMAGE_MAX);
 
   async function handleFiles(fileList: FileList | null) {
     const files = Array.from(fileList ?? []);
@@ -94,9 +96,9 @@ export function UploadStep() {
             支持 JPG / PNG / WebP，{IMAGE_MIN}～{IMAGE_MAX} 张，图片只保存在本机内存中。
           </p>
         </div>
-        <span className="text-sm text-muted-foreground">
-          {images.length} / {IMAGE_MAX}
-        </span>
+        {selectedCountLabel ? (
+          <span className="text-sm text-muted-foreground">{selectedCountLabel}</span>
+        ) : null}
       </div>
 
       <input
@@ -126,7 +128,9 @@ export function UploadStep() {
       </div>
 
       {images.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+        // auto-rows-min + items-start：行高只由缩略图内容决定，
+        // 不会为「将来可能出现的图片」预留纵向空间，卡片高度完全内容驱动。
+        <ul className="grid auto-rows-min grid-cols-2 items-start gap-3 sm:grid-cols-3 md:grid-cols-4">
           {images.map((image) => (
             <li key={image.id} className="overflow-hidden rounded-lg border">
               {/* eslint-disable-next-line @next/next/no-img-element -- 本地 ObjectURL 预览，next/image 不适用 */}
