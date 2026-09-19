@@ -2,7 +2,8 @@ import { Workspace } from "@/components/shared/Workspace";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-8 px-6 py-12">
+    // 不设 flex-1 / min-height：主容器高度只由内容决定，宽度与内外边距保持不变。
+    <main className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-12">
       <header className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">V0.1 · 完整链路</p>
         <h1 className="font-heading text-3xl font-semibold tracking-tight">抖图 AI</h1>

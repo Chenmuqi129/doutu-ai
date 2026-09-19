@@ -9,8 +9,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="zh-CN" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+    // 高度交给内容决定：html / body 都不再设 h-full / min-h-full，
+    // 内容少时页面自然收口，不再被强行撑满一屏。
+    <html lang="zh-CN" className="antialiased">
+      <body className="flex flex-col">{children}</body>
     </html>
   );
 }
