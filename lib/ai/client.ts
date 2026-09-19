@@ -51,14 +51,14 @@ export function toAIError(error: unknown): AppError {
     return new AppError(ERROR_CODES.AI_TIMEOUT, { detail: "请求被中断" });
   }
 
+  if (error instanceof OpenAI.APIConnectionError) {
+    return new AppError(ERROR_CODES.NETWORK_ERROR, { detail: "无法连接上游模型服务" });
+  }
+
   if (error instanceof OpenAI.APIError) {
     return new AppError(ERROR_CODES.AI_UPSTREAM_ERROR, {
       detail: `上游返回 status=${error.status ?? "unknown"}`,
     });
-  }
-
-  if (error instanceof OpenAI.APIConnectionError) {
-    return new AppError(ERROR_CODES.NETWORK_ERROR, { detail: "无法连接上游模型服务" });
   }
 
   return new AppError(ERROR_CODES.AI_UPSTREAM_ERROR, { detail: "模型调用失败" });
