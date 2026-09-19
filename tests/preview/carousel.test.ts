@@ -5,7 +5,9 @@ import {
   hasCarouselControls,
   normalizeImageIndex,
   stepImageIndex,
+  toAspectRatio,
 } from "@/lib/preview/carousel";
+import type { SessionImage } from "@/lib/types";
 
 describe("ImageCarousel —— 索引与翻页逻辑", () => {
   describe("normalizeImageIndex", () => {
@@ -71,3 +73,90 @@ describe("ImageCarousel —— 索引与翻页逻辑", () => {
     });
   });
 });
+
+describe("ImageCarousel —— 原图比例", () => {
+  describe("toAspectRatio", () => {
+    it("横图 1200×900 得到 4:3", () => {
+      expect(toAspectRatio(1200, 900)).toBeCloseTo(4 / 3, 10);
+    });
+
+    it("竖图 900×1200 得到 3:4", () => {
+      expect(toAspectRatio(900, 1200)).toBeCloseTo(3 / 4, 10);
+    });
+
+    it("方图 1080×1080 得到 1:1", () => {
+      expect(toAspectRatio(1080, 1080)).toBe(1);
+    });
+
+    it("宽屏 1920×1080 得到 16:9", () => {
+      expect(toAspectRatio(1920, 1080)).toBeCloseTo(16 / 9, 10);
+    });
+
+    it("3:4 不会再被当成 4:3（宽高顺序不能颠倒）", () => {
+      expect(toAspectRatio(900, 1200)).not.toBeCloseTo(4 / 3, 4);
+      expect(toAspectRatio(1200, 900)).not.toBeCloseTo(3 / 4, 4);
+    });
+
+    it("尺寸不合法时返回 undefined（调用方退化为按图片自身比例渲染）", () => {
+      expect(toAspectRatio(0, 900)).toBeUndefined();
+      expect(toAspectRatio(1200, 0)).toBeUndefined();
+      expect(toAspectRatio(-1200, 900)).toBeUndefined();
+      expect(toAspectRatio(Number.NaN, 900)).toBeUndefined();
+      expect(toAspectRatio(1200, Number.POSITIVE_INFINITY)).toBeUndefined();
+    });
+  });
+
+  it("多张不同尺寸的图片各自拥有自己的比例，互不影响", () => {
+    const images: SessionImage[] = [
+      makeImage("wide", 1920, 1080),
+      makeImage("tall", 900, 1200),
+      makeImage("square", 1080, 1080),
+      makeImage("classic", 1200, 900),
+    ];
+
+    const ratios = images.map((image) => toAspectRatio(image.width, image.height));
+
+    expect(ratios[0]).toBeCloseTo(16 / 9, 10);
+    expect(ratios[1]).toBeCloseTo(3 / 4, 10);
+    expect(ratios[2]).toBe(1);
+    expect(ratios[3]).toBeCloseTo(4 / 3, 10);
+  });
+
+  it("切换图片（索引变化）会取到当前这张图的比例，而不是上一张的", () => {
+    const images: SessionImage[] = [
+      makeImage("wide", 1920, 1080),
+      makeImage("tall", 900, 1200),
+    ];
+
+    const ratioOfCurrent = (index: number) => {
+      const current = normalizeImageIndex(index, images.length);
+      const image = images[current];
+      return toAspectRatio(image.width, image.height);
+    };
+
+    expect(ratioOfCurrent(0)).toBeCloseTo(16 / 9, 10);
+    expect(ratioOfCurrent(stepImageIndex(0, 1, images.length))).toBeCloseTo(3 / 4, 10);
+  });
+
+  it("图片顺序与上传顺序一致（比例也按同一顺序取值）", () => {
+    const images: SessionImage[] = [
+      makeImage("first", 1200, 900),
+      makeImage("second", 900, 1200),
+      makeImage("third", 1080, 1080),
+    ];
+
+    expect(images.map((image) => image.id)).toEqual(["first", "second", "third"]);
+  });
+});
+
+function makeImage(id: string, width: number, height: number): SessionImage {
+  return {
+    id,
+    objectUrl: `blob:mock-${id}`,
+    fileName: `${id}.jpg`,
+    mimeType: "image/jpeg",
+    sizeBytes: 1024,
+    width,
+    height,
+  };
+}

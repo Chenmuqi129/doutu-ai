@@ -50,3 +50,20 @@ export function formatImageCounter(index: number, total: number): string {
 export function hasCarouselControls(total: number): boolean {
   return total > 1;
 }
+
+/**
+ * 图片宽高比 = width / height，用于给预览容器动态设置 aspect-ratio。
+ *
+ * 尺寸来自上传压缩阶段记录的 SessionImage.width / height（真实像素尺寸），
+ * 拿不到合法尺寸时返回 undefined —— 调用方此时不做任何比例约束，
+ * 直接让图片按自身比例自然排布，绝不裁切、绝不套用固定容器比例。
+ */
+export function toAspectRatio(width: number, height: number): number | undefined {
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    return undefined;
+  }
+  if (width <= 0 || height <= 0) {
+    return undefined;
+  }
+  return width / height;
+}
