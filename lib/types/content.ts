@@ -1,3 +1,5 @@
+import type { TitleValidation } from "@/lib/rules/validateTitle";
+
 /**
  * 内容领域模型 —— AI 产出物在前端与后端之间流转的唯一形状。
  */
@@ -30,18 +32,24 @@ export type Topic = {
   reason?: string;
 };
 
-/** 标题风格，仅用于展示与多样性控制，不参与规则校验。 */
-export type TitleStyle = "悬念" | "干货" | "共鸣" | "反差" | "清单";
+/**
+ * 标题风格，仅用于展示与多样性控制，不参与规则校验。
+ * 用常量数组作为唯一来源，让 Prompt 与 Zod 在运行时也能复用同一份取值。
+ */
+export const TITLE_STYLES = ["悬念", "干货", "共鸣", "反差", "清单"] as const;
+
+export type TitleStyle = (typeof TITLE_STYLES)[number];
 
 /**
  * 生成后的标题。
- * count / valid 一律由程序计算并回填，绝不采用模型自报的字数。
+ *
+ * - 校验信息直接复用 P1 的 TitleValidation（valid / count / max / reason / normalized），
+ *   全项目只有这一套字段定义，count 一律由程序计算，绝不采用模型自报的字数；
+ * - text 保存规范化后的完整标题，超长时不会被截断，UI 可以如实显示 21 / 20。
  */
-export type GeneratedTitle = {
+export type GeneratedTitle = TitleValidation & {
   text: string;
   style?: TitleStyle;
-  count: number;
-  valid: boolean;
 };
 
 /** 正文 + 标签（规格书 §10 / §11）。 */

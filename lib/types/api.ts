@@ -1,6 +1,12 @@
 import type { ApiErrorBody } from "@/lib/errors";
 
-import type { ContentDraft, GeneratedTitle, MaterialAnalysisResult, Topic } from "./content";
+import type {
+  ContentDraft,
+  GeneratedTitle,
+  MaterialAnalysis,
+  MaterialAnalysisResult,
+  Topic,
+} from "./content";
 
 /**
  * 全站统一响应包络。
@@ -47,9 +53,14 @@ export type HealthData = {
 /** POST /api/analyze —— multipart/form-data 上传图片，返回 analysis + topics + brief。 */
 export type AnalyzeResponse = MaterialAnalysisResult;
 
-/** POST /api/titles —— 输入 brief + 已选选题，返回 5 个已通过规则校验的标题。 */
+/**
+ * POST /api/titles —— 输入 analysis + brief + 已选选题，返回 TITLE_COUNT 条候选标题。
+ *
+ * P0 占位契约里的 sessionId 已移除：全项目没有服务端会话存储，
+ * 也不存在 sessionId 的生成点，保留只会变成一个无法满足的必填字段。
+ */
 export type TitlesRequest = {
-  sessionId: string;
+  analysis: MaterialAnalysis;
   brief: string;
   topic: Topic;
 };

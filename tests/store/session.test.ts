@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getRegisteredUploadCount, registerUploadBlob } from "@/lib/image/uploadRegistry";
+import { TITLE_MAX } from "@/lib/rules/constants";
 import {
   SESSION_STORAGE_KEY,
   useSession,
 } from "@/lib/store/useSession";
-import type { MaterialAnalysisResult, SessionImage } from "@/lib/types";
+import type { GeneratedTitle, MaterialAnalysisResult, SessionImage } from "@/lib/types";
 
 const ANALYSIS_RESULT: MaterialAnalysisResult = {
   analysis: {
@@ -30,6 +31,18 @@ function makeImage(id: string): SessionImage {
     sizeBytes: 1024,
     width: 1280,
     height: 960,
+  };
+}
+
+// 与 lib/types 的 GeneratedTitle 完全一致的标题夹具
+function makeTitle(text: string): GeneratedTitle {
+  const count = text.length;
+  return {
+    text,
+    count,
+    max: TITLE_MAX,
+    valid: count > 0 && count <= TITLE_MAX,
+    normalized: text,
   };
 }
 
@@ -174,7 +187,7 @@ describe("useSession —— Stale Matrix", () => {
   it("若已存在标题或正文，上传图片会标记 titles / draft 过期", () => {
     useSession.getState().applyAnalysis(ANALYSIS_RESULT);
     useSession.setState({
-      titles: [{ text: "旧标题", count: 3, valid: true }],
+      titles: [makeTitle("旧标题")],
       selectedTitle: "旧标题",
       draft: { body: "旧正文", tags: ["#美食"] },
     });
@@ -196,7 +209,7 @@ describe("useSession —— Stale Matrix", () => {
     useSession.getState().applyAnalysis(ANALYSIS_RESULT);
     useSession.getState().selectTopic("t1");
     useSession.setState({
-      titles: [{ text: "旧标题", count: 3, valid: true }],
+      titles: [makeTitle("旧标题")],
       selectedTitle: "旧标题",
       draft: { body: "旧正文", tags: ["#美食"] },
     });
@@ -249,5 +262,167 @@ describe("useSession —— 重置", () => {
     expect(state.step).toBe("upload");
     expect(state.stale).toEqual({ titles: false, draft: false });
     expect(getRegisteredUploadCount()).toBe(0);
+  });
+});
+
+describe("useSession —— P3-A 标题状态", () => {
+  const VALID_TITLE: GeneratedTitle = {
+    text: "农村手工锅巴太香了",
+    style: "共鸣",
+    count: 9,
+    max: TITLE_MAX,
+    valid: true,
+    normalized: "农村手工锅巴太香了",
+  };
+
+  const OVERLONG_TEXT = "字".repeat(TITLE_MAX + 1);
+  const INVALID_TITLE: GeneratedTitle = {
+    text: OVERLONG_TEXT,
+    count: TITLE_MAX + 1,
+    max: TITLE_MAX,
+    valid: false,
+    reason: "TITLE_TOO_LONG",
+    normalized: OVERLONG_TEXT,
+  };
+
+  // 走真实动作链：分析 → 选题 → 生成标题
+  function withTitles(): void {
+    useSession.getState().applyAnalysis(ANALYSIS_RESULT);
+    useSession.getState().selectTopic("t1");
+    useSession.getState().applyTitles([VALID_TITLE, INVALID_TITLE]);
+  }
+
+  it("首次生成标题：写入 titles、进入 titles step，且不误报 stale", () => {
+    withTitles();
+
+    const state = useSession.getState();
+    expect(state.titles).toEqual([VALID_TITLE, INVALID_TITLE]);
+    expect(state.selectedTitle).toBeUndefined();
+    expect(state.step).toBe("titles");
+    expect(state.titlesStatus).toBe("idle");
+    expect(state.stale).toEqual({ titles: false, draft: false });
+  });
+
+  it("重新生成标题：替换旧 titles 并清除 selectedTitle 与 draft", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+    useSession.setState({ draft: { body: "旧正文", tags: ["#美食"] } });
+
+    useSession.getState().applyTitles([VALID_TITLE]);
+
+    const state = useSession.getState();
+    expect(state.titles).toEqual([VALID_TITLE]);
+    expect(state.selectedTitle).toBeUndefined();
+    expect(state.draft).toBeUndefined();
+    expect(state.stale).toEqual({ titles: false, draft: true });
+  });
+
+  it("selectTitle 只接受列表中存在且通过校验的标题", () => {
+    withTitles();
+
+    useSession.getState().selectTitle(VALID_TITLE.text);
+
+    expect(useSession.getState().selectedTitle).toBe(VALID_TITLE.text);
+    expect(useSession.getState().stale.titles).toBe(false);
+  });
+
+  it("selectTitle 拒绝不存在的标题与不合格（超 20 字）的标题", () => {
+    withTitles();
+
+    useSession.getState().selectTitle("列表里没有的标题");
+    expect(useSession.getState().selectedTitle).toBeUndefined();
+
+    useSession.getState().selectTitle(OVERLONG_TEXT);
+    expect(useSession.getState().selectedTitle).toBeUndefined();
+  });
+
+  it("selectTitle 不发起任何网络请求（不会重新调用分析 API）", () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    try {
+      withTitles();
+      useSession.getState().selectTitle(VALID_TITLE.text);
+
+      expect(useSession.getState().selectedTitle).toBe(VALID_TITLE.text);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("selectTitle 会作废已存在的 draft 并标记 stale.draft", () => {
+    withTitles();
+    useSession.setState({ draft: { body: "旧正文", tags: ["#美食"] } });
+
+    useSession.getState().selectTitle(VALID_TITLE.text);
+
+    const state = useSession.getState();
+    expect(state.draft).toBeUndefined();
+    expect(state.stale).toEqual({ titles: false, draft: true });
+  });
+
+  it("重复选择同一个标题不改变状态", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+    useSession.setState({ draft: { body: "新正文", tags: ["#美食"] } });
+
+    useSession.getState().selectTitle(VALID_TITLE.text);
+
+    expect(useSession.getState().draft).toBeDefined();
+    expect(useSession.getState().selectedTitle).toBe(VALID_TITLE.text);
+  });
+
+  it("切换选题：清除 titles / selectedTitle / draft，analysis 与 topics 保留", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+    useSession.setState({ draft: { body: "旧正文", tags: ["#美食"] } });
+
+    useSession.getState().selectTopic("t2");
+
+    const state = useSession.getState();
+    expect(state.selectedTopicId).toBe("t2");
+    expect(state.titles).toBeUndefined();
+    expect(state.selectedTitle).toBeUndefined();
+    expect(state.draft).toBeUndefined();
+    expect(state.stale).toEqual({ titles: true, draft: true });
+    expect(state.analysis).toEqual(ANALYSIS_RESULT.analysis);
+    expect(state.topics).toHaveLength(3);
+  });
+
+  it("重复点击当前选题不会清掉已生成的标题", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+
+    useSession.getState().selectTopic("t1");
+
+    const state = useSession.getState();
+    expect(state.selectedTopicId).toBe("t1");
+    expect(state.titles).toEqual([VALID_TITLE, INVALID_TITLE]);
+    expect(state.selectedTitle).toBe(VALID_TITLE.text);
+    expect(state.stale).toEqual({ titles: false, draft: false });
+  });
+
+  it("重新分析素材会连同标题一起清空", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+
+    useSession.getState().applyAnalysis(ANALYSIS_RESULT);
+
+    const state = useSession.getState();
+    expect(state.titles).toBeUndefined();
+    expect(state.selectedTitle).toBeUndefined();
+    expect(state.stale).toEqual({ titles: false, draft: false });
+  });
+
+  it("titles / selectedTitle 会进入 localStorage，状态字段不会", () => {
+    withTitles();
+    useSession.getState().selectTitle(VALID_TITLE.text);
+    useSession.getState().setTitlesStatus("error", "出错了");
+
+    const persisted = persistedState();
+    expect(persisted?.titles).toHaveLength(2);
+    expect(persisted?.selectedTitle).toBe(VALID_TITLE.text);
+    expect(persisted).not.toHaveProperty("titlesStatus");
+    expect(persisted).not.toHaveProperty("titlesError");
   });
 });

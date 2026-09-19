@@ -3,11 +3,12 @@
 import { useEffect } from "react";
 
 import { AnalysisResult } from "@/components/analysis/AnalysisResult";
+import { TitlePicker } from "@/components/titles/TitlePicker";
 import { TopicPicker } from "@/components/topics/TopicPicker";
 import { UploadStep } from "@/components/upload/UploadStep";
 import { useSession } from "@/lib/store/useSession";
 
-// P2 工作区：上传 → 分析 → 选题。
+// 工作区：上传 → 分析 → 选题 → 生成标题（P3-A）。
 //
 // 为什么要等 mount：Zustand persist 会在客户端同步读取 localStorage，
 // 直接渲染会和服务端首屏 HTML 不一致（hydration mismatch），
@@ -23,11 +24,8 @@ export function Workspace() {
 }
 
 function WorkspaceBody() {
-  const topics = useSession((state) => state.topics);
-  const selectedTopicId = useSession((state) => state.selectedTopicId);
   const stale = useSession((state) => state.stale);
 
-  const selectedTopic = topics?.find((topic) => topic.id === selectedTopicId);
   const hasStaleContent = stale.titles || stale.draft;
 
   return (
@@ -42,13 +40,7 @@ function WorkspaceBody() {
 
       <AnalysisResult />
       <TopicPicker />
-
-      {selectedTopic ? (
-        <p className="text-sm text-muted-foreground">
-          已选择选题：<span className="text-foreground">{selectedTopic.title}</span>
-          （P3 将在此处继续生成 5 个标题）
-        </p>
-      ) : null}
+      <TitlePicker />
     </div>
   );
 }

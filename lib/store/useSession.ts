@@ -5,6 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 
 import { clearUploadBlobs, releaseUploadBlob } from "@/lib/image/uploadRegistry";
 import type {
+  GeneratedTitle,
   MaterialAnalysisResult,
   SessionImage,
   SessionState,
@@ -19,9 +20,14 @@ import type {
 
 export type AnalyzeStatus = "idle" | "loading" | "error";
 
+/** 标题生成状态（P3-A），与 analyzeStatus 一样只存在于内存，不写入 localStorage。 */
+export type TitlesStatus = "idle" | "loading" | "error";
+
 export type SessionStoreState = SessionState & {
   analyzeStatus: AnalyzeStatus;
   analyzeError?: string;
+  titlesStatus: TitlesStatus;
+  titlesError?: string;
 };
 
 export type SessionActions = {
@@ -31,6 +37,9 @@ export type SessionActions = {
   applyAnalysis: (result: MaterialAnalysisResult) => void;
   selectTopic: (topicId: string) => void;
   setAnalyzeStatus: (status: AnalyzeStatus, error?: string) => void;
+  applyTitles: (titles: GeneratedTitle[]) => void;
+  selectTitle: (text: string) => void;
+  setTitlesStatus: (status: TitlesStatus, error?: string) => void;
   resetSession: () => void;
 };
 
@@ -43,6 +52,7 @@ export const INITIAL_SESSION_STATE: SessionStoreState = {
   step: "upload",
   stale: { titles: false, draft: false },
   analyzeStatus: "idle",
+  titlesStatus: "idle",
 };
 
 /* ---------------- Stale Matrix（架构差异报告 M12） ---------------- */
@@ -72,6 +82,8 @@ function invalidateForImageChange(state: SessionStoreState) {
     step: "upload" as SessionStep,
     analyzeStatus: "idle" as AnalyzeStatus,
     analyzeError: undefined,
+    titlesStatus: "idle" as TitlesStatus,
+    titlesError: undefined,
   };
 }
 
@@ -164,6 +176,8 @@ export const useSession = create<SessionStore>()(
           step: "topics",
           analyzeStatus: "idle",
           analyzeError: undefined,
+          titlesStatus: "idle",
+          titlesError: undefined,
         });
       },
 
@@ -173,12 +187,61 @@ export const useSession = create<SessionStore>()(
           if (!exists) {
             return {};
           }
+          // 重复点击当前已选中的选题不改变状态：
+          // 否则会把已经生成的标题与正文白白清掉。
+          if (state.selectedTopicId === topicId) {
+            return {};
+          }
           return { ...invalidateForTopicChange(state), selectedTopicId: topicId };
         });
       },
 
       setAnalyzeStatus: (status, error) => {
         set({ analyzeStatus: status, analyzeError: error });
+      },
+
+      // 生成/重新生成标题：替换整个列表，并作废 selectedTitle 与下游 draft。
+      applyTitles: (titles) => {
+        set((state) => {
+          const had = buildStaleFlags(state);
+
+          return {
+            titles,
+            selectedTitle: undefined,
+            draft: undefined,
+            // 标题是刚生成的，stale.titles 必须复位；draft 是否提示取决于它此前是否存在。
+            stale: { titles: false, draft: had.draft },
+            step: "titles" as SessionStep,
+            titlesStatus: "idle" as TitlesStatus,
+            titlesError: undefined,
+          };
+        });
+      },
+
+      // 选择标题：纯本地操作，不发起任何网络请求。
+      // 只接受当前列表中真实存在、且通过 validateTitle 的标题。
+      selectTitle: (text) => {
+        set((state) => {
+          const target = state.titles?.find((title) => title.text === text);
+          if (!target || !target.valid) {
+            return {};
+          }
+          if (state.selectedTitle === text) {
+            return {};
+          }
+
+          const had = buildStaleFlags(state);
+
+          return {
+            selectedTitle: text,
+            draft: undefined,
+            stale: { titles: false, draft: had.draft },
+          };
+        });
+      },
+
+      setTitlesStatus: (status, error) => {
+        set({ titlesStatus: status, titlesError: error });
       },
 
       resetSession: () => {
@@ -199,6 +262,7 @@ export const useSession = create<SessionStore>()(
           selectedTitle: undefined,
           draft: undefined,
           analyzeError: undefined,
+          titlesError: undefined,
         });
       },
     }),
