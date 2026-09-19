@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getRegisteredUploadCount, registerUploadBlob } from "@/lib/image/uploadRegistry";
-import { TITLE_MAX } from "@/lib/rules/constants";
+import { TAG_MAX, TITLE_MAX } from "@/lib/rules/constants";
 import {
   SESSION_STORAGE_KEY,
   useSession,
 } from "@/lib/store/useSession";
-import type { GeneratedTitle, MaterialAnalysisResult, SessionImage } from "@/lib/types";
+import type {
+  ContentDraft,
+  GeneratedTitle,
+  MaterialAnalysisResult,
+  SessionImage,
+} from "@/lib/types";
 
 const ANALYSIS_RESULT: MaterialAnalysisResult = {
   analysis: {
@@ -424,5 +429,137 @@ describe("useSession —— P3-A 标题状态", () => {
     expect(persisted?.selectedTitle).toBe(VALID_TITLE.text);
     expect(persisted).not.toHaveProperty("titlesStatus");
     expect(persisted).not.toHaveProperty("titlesError");
+  });
+});
+
+describe("useSession —— P3-B 正文与标签状态", () => {
+  const TITLE_A: GeneratedTitle = {
+    text: "农村手工锅巴太香了",
+    count: 9,
+    max: TITLE_MAX,
+    valid: true,
+    normalized: "农村手工锅巴太香了",
+  };
+
+  const TITLE_B: GeneratedTitle = {
+    text: "家里怎么做手工锅巴",
+    count: 9,
+    max: TITLE_MAX,
+    valid: true,
+    normalized: "家里怎么做手工锅巴",
+  };
+
+  const DRAFT: ContentDraft = {
+    body: "第一段正文，用来验证 draft 的保存与替换。\n\n第二段正文，长度足够通过规则校验。",
+    tags: ["#美食", "#锅巴"],
+    tagValidation: {
+      tags: ["#美食", "#锅巴"],
+      max: TAG_MAX,
+      removed: [],
+      removedCount: 0,
+      dropped: [],
+      duplicates: [],
+      changed: false,
+    },
+  };
+
+  const NEW_DRAFT: ContentDraft = {
+    body: "这是重新生成的正文内容，用来验证旧 draft 会被整体替换掉。",
+    tags: ["#新标签"],
+  };
+
+  // 走真实动作链：分析 → 选题 → 生成标题 → 选标题 → 生成正文
+  function withDraft(): void {
+    const state = useSession.getState();
+    state.applyAnalysis(ANALYSIS_RESULT);
+    state.selectTopic("t1");
+    state.applyTitles([TITLE_A, TITLE_B]);
+    state.selectTitle(TITLE_A.text);
+    state.applyDraft(DRAFT);
+  }
+
+  it("applyDraft 写入 draft、复位 stale.draft 并进入 draft step", () => {
+    withDraft();
+
+    const state = useSession.getState();
+    expect(state.draft).toEqual(DRAFT);
+    expect(state.selectedTitle).toBe(TITLE_A.text);
+    expect(state.stale).toEqual({ titles: false, draft: false });
+    expect(state.step).toBe("draft");
+    expect(state.draftStatus).toBe("idle");
+  });
+
+  it("重新生成 draft 会整体替换旧 draft", () => {
+    withDraft();
+
+    useSession.getState().applyDraft(NEW_DRAFT);
+
+    const state = useSession.getState();
+    expect(state.draft).toEqual(NEW_DRAFT);
+    expect(state.draft?.body).toBe(NEW_DRAFT.body);
+    expect(state.titles).toHaveLength(2);
+  });
+
+  it("选择新标题会清除已生成的 draft 并标记 stale.draft", () => {
+    withDraft();
+
+    useSession.getState().selectTitle(TITLE_B.text);
+
+    const state = useSession.getState();
+    expect(state.selectedTitle).toBe(TITLE_B.text);
+    expect(state.draft).toBeUndefined();
+    expect(state.stale).toEqual({ titles: false, draft: true });
+  });
+
+  it("切换 topic 会清除 draft", () => {
+    withDraft();
+
+    useSession.getState().selectTopic("t2");
+
+    expect(useSession.getState().draft).toBeUndefined();
+  });
+
+  it("重新生成标题会清除 draft", () => {
+    withDraft();
+
+    useSession.getState().applyTitles([TITLE_A]);
+
+    const state = useSession.getState();
+    expect(state.draft).toBeUndefined();
+    expect(state.selectedTitle).toBeUndefined();
+  });
+
+  it("applyDraft 不影响 analysis / topics / brief", () => {
+    withDraft();
+
+    const state = useSession.getState();
+    expect(state.analysis).toEqual(ANALYSIS_RESULT.analysis);
+    expect(state.topics).toHaveLength(3);
+    expect(state.brief).toBe(ANALYSIS_RESULT.brief);
+  });
+
+  it("draft 会进入 localStorage，draftStatus / draftError 不会", () => {
+    withDraft();
+    useSession.getState().setDraftStatus("error", "出错了");
+
+    const persisted = persistedState();
+    expect(persisted?.draft).toEqual(DRAFT);
+    expect(persisted).not.toHaveProperty("draftStatus");
+    expect(persisted).not.toHaveProperty("draftError");
+  });
+
+  it("重新分析或切换选题会把 draftStatus 复位为 idle", () => {
+    withDraft();
+    useSession.getState().setDraftStatus("error", "出错了");
+
+    useSession.getState().applyAnalysis(ANALYSIS_RESULT);
+    expect(useSession.getState().draftStatus).toBe("idle");
+    expect(useSession.getState().draftError).toBeUndefined();
+
+    withDraft();
+    useSession.getState().setDraftStatus("error", "又出错了");
+    useSession.getState().selectTopic("t2");
+    expect(useSession.getState().draftStatus).toBe("idle");
+    expect(useSession.getState().draftError).toBeUndefined();
   });
 });

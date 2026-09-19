@@ -1,4 +1,5 @@
 import type { TitleValidation } from "@/lib/rules/validateTitle";
+import type { TagValidationResult } from "@/lib/rules/validateTags";
 
 /**
  * 内容领域模型 —— AI 产出物在前端与后端之间流转的唯一形状。
@@ -52,10 +53,17 @@ export type GeneratedTitle = TitleValidation & {
   style?: TitleStyle;
 };
 
-/** 正文 + 标签（规格书 §10 / §11）。 */
+/**
+ * 正文 + 标签（规格书 §10 / §11）。
+ *
+ * tagValidation 直接复用 P1 的 TagValidationResult（tags / removed / dropped /
+ * duplicates / changed / message），全项目只有这一套标签字段定义；
+ * tags 本身就是 tagValidation.tags，模型原始标签永远不作为可信数据保存。
+ */
 export type ContentDraft = {
   body: string;
   tags: string[];
+  tagValidation?: TagValidationResult;
 };
 
 /**

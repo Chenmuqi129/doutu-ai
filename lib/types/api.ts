@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "@/lib/errors";
+import type { TagValidationResult } from "@/lib/rules/validateTags";
 
 import type {
   ContentDraft,
@@ -69,15 +70,24 @@ export type TitlesResponse = {
   titles: GeneratedTitle[];
 };
 
-/** POST /api/draft —— 输入 brief + 选题 + 标题，返回正文与已规范化去重的标签。 */
+/**
+ * POST /api/draft —— 输入 analysis + brief + 选题 + 已选标题，
+ * 由同一次文本模型调用产出正文与标签。
+ *
+ * 与 /api/titles 一样不使用 sessionId：服务端无会话存储。
+ */
 export type DraftRequest = {
-  sessionId: string;
+  analysis: MaterialAnalysis;
   brief: string;
   topic: Topic;
-  title: string;
+  /** 用户在标题列表里选中的原始文本，服务端会再次过 validateTitle */
+  selectedTitle: string;
 };
 
 export type DraftResponse = ContentDraft & {
-  /** 因超过 TAG_MAX 被程序移除的标签，用于向用户展示「已移除 N 个」提示 */
-  tagsRemoved: string[];
+  /**
+   * 本次标签校验的完整结果（removed / dropped / duplicates / changed / message）。
+   * 取代 P0 占位契约里的 tagsRemoved —— 那份数据本来就属于 validateTags 的返回值。
+   */
+  tagValidation: TagValidationResult;
 };

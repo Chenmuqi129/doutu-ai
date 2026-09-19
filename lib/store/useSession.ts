@@ -5,6 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from "zustand/middlewar
 
 import { clearUploadBlobs, releaseUploadBlob } from "@/lib/image/uploadRegistry";
 import type {
+  ContentDraft,
   GeneratedTitle,
   MaterialAnalysisResult,
   SessionImage,
@@ -23,11 +24,16 @@ export type AnalyzeStatus = "idle" | "loading" | "error";
 /** 标题生成状态（P3-A），与 analyzeStatus 一样只存在于内存，不写入 localStorage。 */
 export type TitlesStatus = "idle" | "loading" | "error";
 
+/** 正文 + 标签生成状态（P3-B），同样只存在于内存。 */
+export type DraftStatus = "idle" | "loading" | "error";
+
 export type SessionStoreState = SessionState & {
   analyzeStatus: AnalyzeStatus;
   analyzeError?: string;
   titlesStatus: TitlesStatus;
   titlesError?: string;
+  draftStatus: DraftStatus;
+  draftError?: string;
 };
 
 export type SessionActions = {
@@ -40,6 +46,8 @@ export type SessionActions = {
   applyTitles: (titles: GeneratedTitle[]) => void;
   selectTitle: (text: string) => void;
   setTitlesStatus: (status: TitlesStatus, error?: string) => void;
+  applyDraft: (draft: ContentDraft) => void;
+  setDraftStatus: (status: DraftStatus, error?: string) => void;
   resetSession: () => void;
 };
 
@@ -53,6 +61,7 @@ export const INITIAL_SESSION_STATE: SessionStoreState = {
   stale: { titles: false, draft: false },
   analyzeStatus: "idle",
   titlesStatus: "idle",
+  draftStatus: "idle",
 };
 
 /* ---------------- Stale Matrix（架构差异报告 M12） ---------------- */
@@ -84,6 +93,8 @@ function invalidateForImageChange(state: SessionStoreState) {
     analyzeError: undefined,
     titlesStatus: "idle" as TitlesStatus,
     titlesError: undefined,
+    draftStatus: "idle" as DraftStatus,
+    draftError: undefined,
   };
 }
 
@@ -94,6 +105,10 @@ function invalidateForTopicChange(state: SessionStoreState) {
     selectedTitle: undefined,
     draft: undefined,
     stale: buildStaleFlags(state),
+    titlesStatus: "idle" as TitlesStatus,
+    titlesError: undefined,
+    draftStatus: "idle" as DraftStatus,
+    draftError: undefined,
   };
 }
 
@@ -178,6 +193,8 @@ export const useSession = create<SessionStore>()(
           analyzeError: undefined,
           titlesStatus: "idle",
           titlesError: undefined,
+          draftStatus: "idle",
+          draftError: undefined,
         });
       },
 
@@ -214,6 +231,8 @@ export const useSession = create<SessionStore>()(
             step: "titles" as SessionStep,
             titlesStatus: "idle" as TitlesStatus,
             titlesError: undefined,
+            draftStatus: "idle" as DraftStatus,
+            draftError: undefined,
           };
         });
       },
@@ -236,12 +255,29 @@ export const useSession = create<SessionStore>()(
             selectedTitle: text,
             draft: undefined,
             stale: { titles: false, draft: had.draft },
+            draftStatus: "idle" as DraftStatus,
+            draftError: undefined,
           };
         });
       },
 
       setTitlesStatus: (status, error) => {
         set({ titlesStatus: status, titlesError: error });
+      },
+
+      // 生成/重新生成正文 + 标签：整体替换 draft，规则校验信息随 draft 一起保存。
+      applyDraft: (draft) => {
+        set({
+          draft,
+          stale: { titles: false, draft: false },
+          step: "draft" as SessionStep,
+          draftStatus: "idle" as DraftStatus,
+          draftError: undefined,
+        });
+      },
+
+      setDraftStatus: (status, error) => {
+        set({ draftStatus: status, draftError: error });
       },
 
       resetSession: () => {
@@ -263,6 +299,7 @@ export const useSession = create<SessionStore>()(
           draft: undefined,
           analyzeError: undefined,
           titlesError: undefined,
+          draftError: undefined,
         });
       },
     }),
