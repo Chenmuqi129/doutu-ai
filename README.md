@@ -4,7 +4,7 @@
 
 抖图 AI 是一个面向抖音图文创作者的 AI 内容发布助手。用户上传 1～9 张图片后，系统会依次完成素材理解、选题生成、标题生成、正文与标签生成，并在发布前提供内容预览与复制能力。
 
-> 这是一个 **V0.1 MVP / 作品集项目**。完整链路已经跑通，但仍属于单机自用级别的实现：没有账号体系、没有数据库、不做自动发布（详见 [当前限制](#10-当前限制)）。
+> 这是一个 **V0.1 MVP **。完整链路已经跑通，但仍属于单机自用级别的实现：没有账号体系、没有数据库、不做自动发布（详见 [当前限制](#10-当前限制)）。
 
 ---
 
@@ -305,6 +305,11 @@ V0.1 是 MVP，以下能力**尚未实现**：
 ## 11. 产品截图
 
 <!-- TODO: 添加 V0.1 完整链路截图 -->
+<img width="3072" height="1582" alt="微信图片_20260920005917_777_4" src="https://github.com/user-attachments/assets/b36256e5-132b-414a-8595-f3a1de83f97f" />
+<img width="3072" height="1582" alt="微信图片_20260920005917_776_4" src="https://github.com/user-attachments/assets/75e68a28-123c-4e2a-ad9b-b2e63fdcc388" />
+<img width="3072" height="1582" alt="微信图片_20260920005917_780_4" src="https://github.com/user-attachments/assets/c2ac4c71-9111-4e99-8d55-fd8c1e4af75f" />
+<img width="3072" height="1582" alt="微信图片_20260920005917_779_4" src="https://github.com/user-attachments/assets/bf7180a9-3d4f-4507-83c2-20cd9ac45407" />
+<img width="3072" height="1582" alt="微信图片_20260920005917_778_4" src="https://github.com/user-attachments/assets/84eb3249-9de1-4f42-9a7d-8988ea849008" />
 
 ---
 
