@@ -305,11 +305,15 @@ V0.1 是 MVP，以下能力**尚未实现**：
 ## 11. 产品截图
 
 <!-- TODO: 添加 V0.1 完整链路截图 -->
-<img width="3072" height="1582" alt="微信图片_20260920005917_777_4" src="https://github.com/user-attachments/assets/b36256e5-132b-414a-8595-f3a1de83f97f" />
-<img width="3072" height="1582" alt="微信图片_20260920005917_776_4" src="https://github.com/user-attachments/assets/75e68a28-123c-4e2a-ad9b-b2e63fdcc388" />
-<img width="3072" height="1582" alt="微信图片_20260920005917_780_4" src="https://github.com/user-attachments/assets/c2ac4c71-9111-4e99-8d55-fd8c1e4af75f" />
-<img width="3072" height="1582" alt="微信图片_20260920005917_779_4" src="https://github.com/user-attachments/assets/bf7180a9-3d4f-4507-83c2-20cd9ac45407" />
-<img width="3072" height="1582" alt="微信图片_20260920005917_778_4" src="https://github.com/user-attachments/assets/84eb3249-9de1-4f42-9a7d-8988ea849008" />
+<img width="3072" height="1582" alt="微信图片_20260920005917_776_4" src="https://github.com/user-attachments/assets/8868e2f5-8c40-4a9b-a9f0-c37385040ebe" />
+
+<img width="3072" height="1582" alt="微信图片_20260920005917_777_4" src="https://github.com/user-attachments/assets/b1d5ff25-c63e-4ee6-a80f-f9b15fd9c675" />
+
+<img width="3072" height="1582" alt="微信图片_20260920005917_778_4" src="https://github.com/user-attachments/assets/52b98757-1229-43d9-b97c-4544e69b8e86" />
+
+<img width="3072" height="1582" alt="微信图片_20260920005917_779_4" src="https://github.com/user-attachments/assets/e18ee800-9fc5-4cac-969c-164113ab0c49" />
+
+<img width="3072" height="1582" alt="微信图片_20260920005917_780_4" src="https://github.com/user-attachments/assets/0750bb35-ed48-4425-8c3c-cc7d1ea03852" />
 
 ---
 
