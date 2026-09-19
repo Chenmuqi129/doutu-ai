@@ -4,12 +4,13 @@ import { useEffect } from "react";
 
 import { AnalysisResult } from "@/components/analysis/AnalysisResult";
 import { DraftPanel } from "@/components/draft/DraftPanel";
+import { PreviewPanel } from "@/components/preview/PreviewPanel";
 import { TitlePicker } from "@/components/titles/TitlePicker";
 import { TopicPicker } from "@/components/topics/TopicPicker";
 import { UploadStep } from "@/components/upload/UploadStep";
 import { useSession } from "@/lib/store/useSession";
 
-// 工作区：上传 → 分析 → 选题 → 生成标题（P3-A）→ 生成正文与标签（P3-B）。
+// 工作区：上传 → 分析 → 选题 → 生成标题 → 生成正文与标签 → 发布预览（P3-C）。
 //
 // 为什么要等 mount：Zustand persist 会在客户端同步读取 localStorage，
 // 直接渲染会和服务端首屏 HTML 不一致（hydration mismatch），
@@ -43,6 +44,7 @@ function WorkspaceBody() {
       <TopicPicker />
       <TitlePicker />
       <DraftPanel />
+      <PreviewPanel />
     </div>
   );
 }
