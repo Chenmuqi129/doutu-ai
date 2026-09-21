@@ -10,7 +10,7 @@
 
 ---
 
-## 在线 Demo
+## 试用网址
 
 **https://doutu-ai-production.up.railway.app/**
 
